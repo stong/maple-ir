@@ -12,7 +12,7 @@
   <artifactId>modasm</artifactId>
   <name>MapleIR-modasm</name>
   <properties>
-    <asm.version>9.2</asm.version>
+    <asm.version>9.6</asm.version>
   </properties>
   <dependencies>
   	<dependency>
