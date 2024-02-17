@@ -79,43 +79,6 @@ public class UbsanHelper {
         return (short)(x * y);
     }
 
-    // Byte
-    public static byte checked_add(byte x, byte y) {
-        if (y > 0 && x > Short.MAX_VALUE - y) {
-            throw new UndefinedBehaviorException("addition of " + x + " and " + y + " would overflow int8");
-        }
-        if (y < 0 && x < Short.MIN_VALUE - y) {
-            throw new UndefinedBehaviorException("addition of " + x + " and " + y + " would underflow int8");
-        }
-        return (byte)(x + y);
-    }
-
-    public static byte checked_sub(byte x, byte y) {
-        if (y < 0 && x > Short.MAX_VALUE + y) {
-            throw new UndefinedBehaviorException("subtraction of " + x + " and " + y + " would overflow int8");
-        }
-        if (y > 0 && x < Short.MIN_VALUE + y) {
-            throw new UndefinedBehaviorException("subtraction of " + x + " and " + y + " would underflow int8");
-        }
-        return (byte)(x - y);
-    }
-
-    public static byte checked_mul(byte x, byte y) {
-        if (x == -1 && y == Short.MIN_VALUE) {
-            throw new UndefinedBehaviorException("multiplication of " + x + " and " + y + " would overflow int8");
-        }
-        if (y == -1 && x == Short.MIN_VALUE) {
-            throw new UndefinedBehaviorException("multiplication of " + x + " and " + y + " would overflow int8");
-        }
-        if (y != 0 && x > Short.MAX_VALUE / y) {
-            throw new UndefinedBehaviorException("multiplication of " + x + " and " + y + " would overflow int8");
-        }
-        if (y != 0 && x < Short.MIN_VALUE / y) {
-            throw new UndefinedBehaviorException("multiplication of " + x + " and " + y + " would underflow int8");
-        }
-        return (byte)(x * y);
-    }
-
     // Long
         public static long checked_add(long x, long y) {
         if (y > 0 && x > Long.MAX_VALUE - y) {

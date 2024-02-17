@@ -15,6 +15,7 @@ import org.mapleir.ir.code.expr.ArithmeticExpr.Operator;
 import org.mapleir.ir.code.expr.invoke.StaticInvocationExpr;
 import org.mapleir.ir.codegen.ControlFlowGraphDumper;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Type;
 import org.topdank.banalysis.asm.desc.Description;
 
 import java.io.*;
@@ -25,7 +26,6 @@ import java.security.ProtectionDomain;
 import java.util.Arrays;
 
 public class MyJavaAgent {
-
     public MyJavaAgent() {
     }
 
@@ -61,15 +61,19 @@ class JavaInstrumentTransformer implements ClassFileTransformer {
                             // Replace arithmetic operation with function call to static helper function
                             String helperFuncName = "checked_" + op.name().toLowerCase();
                             assert e1.getLeft().getType() == e1.getRight().getType() && e1.getLeft().getType() == e1.getType();
-                            String argumentDesc = e1.getLeft().getType().getDescriptor(); // J I S B etc.
-                            assert Description.isPrimitive(argumentDesc);
-                            String helperFuncDesc = "(%s%s)%s".formatted(argumentDesc, argumentDesc, argumentDesc);
-                            Expr[] args = new Expr[] { e1.getLeft(), e1.getRight() };
-                            Arrays.stream(args).forEach(argExpr -> argExpr.setParent(null)); // before reparenting, set parent to null. in MapleIR, expr nodes may only belong to one parent node
-                            var instrumentedOp = new StaticInvocationExpr(args, "UbsanHelper", helperFuncName, helperFuncDesc);
-                            // Replace the arithmetic expr in the statement AST
-                            e.getParent().writeAt(instrumentedOp, e.getParent().indexOf(e));
-                            anyChanges = true;
+                            Type type = e1.getLeft().getType();
+                            // Note: bytes overflow will pretty much never happen because I think java promotes everything to an int anyways
+                            if (type == Type.LONG_TYPE || type == Type.INT_TYPE || type == Type.SHORT_TYPE) {
+                                String argumentDesc = type.getDescriptor(); // J I S B etc.
+                                assert Description.isPrimitive(argumentDesc);
+                                String helperFuncDesc = "(%s%s)%s".formatted(argumentDesc, argumentDesc, argumentDesc);
+                                Expr[] args = new Expr[] { e1.getLeft(), e1.getRight() };
+                                Arrays.stream(args).forEach(argExpr -> argExpr.setParent(null)); // before reparenting, set parent to null. in MapleIR, expr nodes may only belong to one parent node
+                                var instrumentedOp = new StaticInvocationExpr(args, "UbsanHelper", helperFuncName, helperFuncDesc);
+                                // Replace the arithmetic expr in the statement AST
+                                e.getParent().writeAt(instrumentedOp, e.getParent().indexOf(e));
+                                anyChanges = true;
+                            }
                         }
                     }
                 }
@@ -80,7 +84,6 @@ class JavaInstrumentTransformer implements ClassFileTransformer {
 
     @Override
     public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) {
-
         ClassNode cn = null;
         try {
             cn = ClassHelper.create(new ByteArrayInputStream(classfileBuffer));
@@ -99,8 +102,6 @@ class JavaInstrumentTransformer implements ClassFileTransformer {
         for (MethodNode mn : cn.getMethods()) {
             // if (!mn.getName().equals("merge"))
             //     continue;
-            // if (mn.getName().equals("merge"))
-            //     System.out.println(InsnListUtils.insnListToString(mn.node.instructions));
 
             ControlFlowGraph cfg = irFactory.getNonNull(mn);
 
@@ -110,24 +111,17 @@ class JavaInstrumentTransformer implements ClassFileTransformer {
                 continue; // no need to recompile this class, there aren't arithmetic operators to instrument.
             }
 
-            // if (mn.getName().equals("merge"))
-            //     System.out.println(cfg);
-            // if (mn.getName().equals("merge"))
-            //     CFGUtils.easyDumpCFG(cfg, "pre-destruct");
+            // Sanity and consistency checks
             cfg.verify();
 
+            // Leave SSA form
             BoissinotDestructor.leaveSSA(cfg);
-
-            // if (mn.getName().equals("merge"))
-            //     CFGUtils.easyDumpCFG(cfg, "pre-reaalloc");
             LocalsReallocator.realloc(cfg);
-            // if (mn.getName().equals("merge"))
-            //     CFGUtils.easyDumpCFG(cfg, "post-reaalloc");
-            // System.out.println(cfg);
             cfg.verify();
+
+            // Export to bytes
             System.err.println("[UBSAN] Rewriting " + cn.getDisplayName() + "." + mn.getName());
             (new ControlFlowGraphDumper(cfg, mn)).dump();
-
             // System.out.println(InsnListUtils.insnListToString(mn.node.instructions));
         }
 
