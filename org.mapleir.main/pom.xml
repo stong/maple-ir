@@ -106,6 +106,8 @@
                 </manifest>
                 <manifestEntries>
                     <Main-Class>org.mapleir.Main</Main-Class>
+                    <Agent-Class>org.mapleir.MyJavaAgent</Agent-Class>
+                    <Premain-Class>org.mapleir.MyJavaAgent</Premain-Class>
                     <Built-By>maple-ir</Built-By>
                 </manifestEntries>
             </archive>
