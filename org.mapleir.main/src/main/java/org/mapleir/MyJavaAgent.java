@@ -62,7 +62,6 @@ class JavaInstrumentTransformer implements ClassFileTransformer {
                             String helperFuncName = "checked_" + op.name().toLowerCase();
                             assert e1.getLeft().getType() == e1.getRight().getType() && e1.getLeft().getType() == e1.getType();
                             Type type = e1.getLeft().getType();
-                            // Note: bytes overflow will pretty much never happen because I think java promotes everything to an int anyways
                             if (type == Type.LONG_TYPE || type == Type.INT_TYPE || type == Type.SHORT_TYPE) {
                                 String argumentDesc = type.getDescriptor(); // J I S B etc.
                                 assert Description.isPrimitive(argumentDesc);
